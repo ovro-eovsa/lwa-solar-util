@@ -2,17 +2,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from matplotlib import gridspec
+from matplotlib.dates import AutoDateFormatter, AutoDateLocator
 import sunpy.map as smap
 from astropy import units as u
 from astropy.io import fits
 from astropy.time import Time
 from matplotlib.patches import Ellipse
 import base64
+from dataclasses import replace
 import io
 import matplotlib.image as mpimg
 from astropy.coordinates import EarthLocation, get_sun, AltAz
 
 from . import ndfits
+from . import spec as spec_mod
 from .plot_map import Sunmap
 
 # Ported from ovro-lwa-solar visualization.py (b55f56d5).
@@ -165,6 +168,161 @@ def slow_pipeline_default_plot(fname,
         return fig, axes, ax_spec
     else:
         return fig, axes
+
+
+def plot_spec(
+    fits_path_or_spec,
+    outpath=None,
+    vmax_I=None,
+    pct_hi_I=99,
+    vi_range=(-0.3, 0.3),
+    cmap_I="inferno",
+    cmap_VI="RdBu_r",
+    figsize=(14, 7),
+    suptitle=None,
+    t_range_ratio=(0.0, 1.0),
+    f_range_ratio=(0.0, 1.0),
+):
+    """
+    Two-panel dynamic spectrum: Stokes I (Jy) and V / I.
+
+    FITS format matches `lwasolarview` (see `lwasolarutl.spec.load_spectrum_fits`).
+    Based on `plot_spec_fits.py` from
+    https://github.com/peijin94/lwasolarview/blob/main/plot_spec_fits.py
+
+    Parameters
+    ----------
+    fits_path_or_spec : str or LwaSpectrum
+        Path to an LWA spectrum FITS file, or a pre-loaded :class:`~lwasolarutl.spec.LwaSpectrum`.
+    outpath : str, optional
+        If set, save figure to this path (PNG recommended).
+    vmax_I : float, optional
+        Fixed colour maximum for Stokes I; if omitted, use ``pct_hi_I`` percentile.
+    pct_hi_I : float
+        Upper percentile for auto Stokes-I vmax (default 99).
+    vi_range : (float, float)
+        Colour limits for the V / I panel.
+    cmap_I, cmap_VI : str
+        Colormaps for the two panels.
+    figsize : tuple
+        Figure size in inches.
+    suptitle : str, optional
+        Override automatic suptitle.
+    t_range_ratio : (float, float)
+        Fraction of the **time** axis to plot, each in ``[0, 1]`` with ``lo < hi``
+        (e.g. ``(0.25, 0.75)`` shows the middle half). Default ``(0, 1)`` is full range.
+    f_range_ratio : (float, float)
+        Same for the **frequency** axis (first index of the spectrum array).
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+    axes : ndarray
+        The two axes (Stokes I, then V / I).
+    """
+    if isinstance(fits_path_or_spec, str):
+        sp = spec_mod.load_spectrum_fits(fits_path_or_spec)
+    else:
+        sp = fits_path_or_spec
+
+    def _ratio_slice(n: int, r, name: str):
+        if len(r) != 2:
+            raise ValueError(f"{name} must be a length-2 sequence, got {r!r}")
+        r0, r1 = float(r[0]), float(r[1])
+        r0 = float(np.clip(r0, 0.0, 1.0))
+        r1 = float(np.clip(r1, 0.0, 1.0))
+        if r0 >= r1:
+            raise ValueError(f"{name} must satisfy lo < hi after clipping; got {r!r}")
+        lo = int(np.floor(r0 * n))
+        hi = int(np.ceil(r1 * n))
+        lo = max(0, min(lo, max(0, n - 1)))
+        hi = max(lo + 1, min(hi, n))
+        return slice(lo, hi)
+
+    nfreq, ntime = sp.spec_I.shape
+    f_sl = _ratio_slice(nfreq, f_range_ratio, "f_range_ratio")
+    t_sl = _ratio_slice(ntime, t_range_ratio, "t_range_ratio")
+    sp = replace(
+        sp,
+        spec_I=np.asarray(sp.spec_I[f_sl, t_sl], dtype=float),
+        spec_V=np.asarray(sp.spec_V[f_sl, t_sl], dtype=float),
+        freqs_mhz=np.asarray(sp.freqs_mhz[f_sl], dtype=float),
+        times=sp.times[t_sl],
+    )
+
+    spec_VI = spec_mod.vi_ratio(sp)
+    vmin_I = max(float(np.nanpercentile(sp.spec_I, 3)), 0.0)
+    vmax_I_eff = (
+        float(vmax_I) if vmax_I is not None else float(np.nanpercentile(sp.spec_I, pct_hi_I))
+    )
+    vi_lo, vi_hi = vi_range
+
+    times_dt = sp.times.to_datetime()
+    extent = [
+        times_dt[0],
+        times_dt[-1],
+        float(sp.freqs_mhz[0]),
+        float(sp.freqs_mhz[-1]),
+    ]
+
+    fig, axes = plt.subplots(
+        2, 1, figsize=figsize, sharex=True, gridspec_kw={"hspace": 0.08}
+    )
+
+    ax_I = axes[0]
+    im_I = ax_I.imshow(
+        sp.spec_I,
+        aspect="auto",
+        origin="lower",
+        extent=extent,
+        vmin=vmin_I,
+        vmax=vmax_I_eff,
+        cmap=cmap_I,
+        interpolation="nearest",
+    )
+    ax_I.set_ylabel("Frequency (MHz)", fontsize=11)
+    ax_I.set_title("Stokes I", fontsize=11, loc="left")
+    cb_I = fig.colorbar(im_I, ax=ax_I, pad=0.01, fraction=0.03)
+    cb_I.set_label("Flux density (Jy)", fontsize=9)
+
+    ax_VI = axes[1]
+    im_VI = ax_VI.imshow(
+        spec_VI,
+        aspect="auto",
+        origin="lower",
+        extent=extent,
+        vmin=vi_lo,
+        vmax=vi_hi,
+        cmap=cmap_VI,
+        interpolation="nearest",
+    )
+    ax_VI.set_ylabel("Frequency (MHz)", fontsize=11)
+    ax_VI.set_xlabel("Time (UT)", fontsize=11)
+    ax_VI.set_title("V / I", fontsize=11, loc="left")
+    cb_VI = fig.colorbar(im_VI, ax=ax_VI, pad=0.01, fraction=0.03)
+    cb_VI.set_label("V / I", fontsize=9)
+
+    locator = AutoDateLocator(minticks=4, maxticks=10)
+    formatter = AutoDateFormatter(locator)
+    formatter.scaled[1 / 24] = "%H:%M"
+    formatter.scaled[1 / (24 * 60)] = "%H:%M"
+    ax_VI.xaxis.set_major_locator(locator)
+    ax_VI.xaxis.set_major_formatter(formatter)
+    fig.autofmt_xdate(rotation=0, ha="center")
+
+    if suptitle is None:
+        suptitle = "OVRO-LWA  {}  {}–{} UT".format(
+            sp.times[0].strftime("%Y-%m-%d"),
+            sp.times[0].strftime("%H:%M:%S"),
+            sp.times[-1].strftime("%H:%M:%S"),
+        )
+    fig.suptitle(suptitle, fontsize=12, y=1.01)
+
+    if outpath is not None:
+        os.makedirs(os.path.dirname(os.path.abspath(outpath)) or ".", exist_ok=True)
+        fig.savefig(outpath, dpi=150, bbox_inches="tight")
+
+    return fig, axes
 
 
 def make_allsky_image_plots(allsky_fitsfiles, vmaxs=[16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5], 

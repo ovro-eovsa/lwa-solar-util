@@ -64,19 +64,38 @@ fig, axes = lsu.visualization.slow_pipeline_default_plot(
 
 Requires a FITS file readable by `ndfits` (not raw `.hdf` — recover to FITS first if needed).
 
+### Dynamic spectrum FITS (Stokes I / V)
+
+Load and plot two panels (I and V/I) in the format used by [lwasolarview](https://github.com/peijin94/lwasolarview/blob/main/plot_spec_fits.py):
+
+```python
+s = lsu.spec.load_spectrum_fits("demofile/20260513.fits")
+fig, axes = lsu.visualization.plot_spec(s)  # or plot_spec("demofile/20260513.fits")
+
+# Plot a fraction of the time or frequency axis (each in [0, 1], low < high):
+fig, axes = lsu.visualization.plot_spec(
+    s,
+    t_range_ratio=(0.2, 0.8),   # middle 60% of times
+    f_range_ratio=(0.0, 1.0),   # full band (default)
+)
+```
+
+Optional keyword arguments include `outpath` (save PNG), `vmax_I` / `pct_hi_I` for Stokes-I scaling, `vi_range` for the V/I panel, and colormap names `cmap_I` / `cmap_VI`.
+
 ## Example notebook
 
-See [`notebook/example.ipynb`](notebook/example.ipynb). It uses the demo HDF in [`demofile/`](demofile/):
+**`notebook/image_plot_hdf.ipynb`** (image cube / HDF): recover, compress, consistency check, 12-panel image plot.
 
-1. Recover HDF5 → FITS  
-2. Compress FITS → HDF5  
-3. Consistency check  
-4. 12-panel plot  
+**`notebook/spec_plot.ipynb`** (dynamic spectrum): load `demofile/20260513.fits`, plot Stokes I and V/I.
+
+Demo data: [`demofile/`](demofile/).
 
 ```bash
 conda activate <your-env>
 pip install -e ".[dev]"
-jupyter notebook notebook/example.ipynb
+jupyter notebook notebook/image_plot_hdf.ipynb
+# or
+jupyter notebook notebook/spec_plot.ipynb
 ```
 
 ## Package layout
@@ -85,8 +104,9 @@ jupyter notebook notebook/example.ipynb
 |--------|---------|
 | `lwasolarutl.file` | `compress_fits_to_h5`, `recover_fits_from_h5`, `check_h5_fits_consistency` |
 | `lwasolarutl.ndfits` | Read/write/wrap multi-dimensional solar FITS ([lwasolarproc](https://github.com/peijin94/lwasolarproc)) |
+| `lwasolarutl.spec` | `load_spectrum_fits`, `vi_ratio` for LWA dynamic-spectrum FITS |
 | `lwasolarutl.plot_map` | `Sunmap` helper for heliocentric `imshow` / limb overlay |
-| `lwasolarutl.visualization` | `slow_pipeline_default_plot`, `make_allsky_image_plots` |
+| `lwasolarutl.visualization` | `slow_pipeline_default_plot`, `plot_spec`, `make_allsky_image_plots` |
 
 Top-level shortcuts: `lsu.compress_fits_to_h5`, `lsu.recover_fits_from_h5`, `lsu.check_h5_fits_consistency`.
 
@@ -101,6 +121,7 @@ pytest tests/
 - HDF5 compression/recovery: [ovro-lwa-solar `utils.py`](https://github.com/ovro-eovsa/ovro-lwa-solar/blob/main/ovrolwasolar/utils.py)
 - `ndfits.py`: [lwasolarproc](https://github.com/peijin94/lwasolarproc/blob/main/lwasolarproc/ndfits.py)
 - 12-panel plot: [ovro-lwa-solar `visualization.py`](https://github.com/ovro-eovsa/ovro-lwa-solar/blob/b55f56d5f63f37e8168d374697af0ba3097b0dc6/ovrolwasolar/visualization.py)
+- Dynamic spectrum plot: [lwasolarview `plot_spec_fits.py`](https://github.com/peijin94/lwasolarview/blob/main/plot_spec_fits.py)
 
 ## License
 

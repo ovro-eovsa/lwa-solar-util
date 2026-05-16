@@ -7,8 +7,9 @@ def test_import():
     assert lsu.__version__ == "0.1.0"
     assert hasattr(lsu, "file")
     assert hasattr(lsu, "ndfits")
-    assert hasattr(lsu, "visualization")
-    assert callable(lsu.ndfits.read)
+    assert hasattr(lsu, "spec")
+    assert callable(lsu.spec.load_spectrum_fits)
+    assert callable(lsu.visualization.plot_spec)
     assert not hasattr(lsu, "processing")
     assert callable(lsu.recover_fits_from_h5)
     assert callable(lsu.compress_fits_to_h5)
