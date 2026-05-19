@@ -82,11 +82,25 @@ fig, axes = lsu.visualization.plot_spec(
 
 Optional keyword arguments include `outpath` (save PNG), `vmax_I` / `pct_hi_I` for Stokes-I scaling, `vi_range` for the V/I panel, and colormap names `cmap_I` / `cmap_VI`.
 
+### Refraction correction
+
+Algorithm and method: **[Refraction_corr.md](Refraction_corr.md)**.
+
+Fit and apply frequency-dependent refraction shifts on multi-channel image FITS (level 1.0 → 1.5):
+
+```python
+px, py = lsu.refraction_corr.refraction_fit_param("image.fits")
+lsu.refraction_corr.save_refraction_fit_param("image.fits", "image_with_coeff.fits", px, py)
+lsu.refraction_corr.apply_refra_coeff("image.fits", px, py, fname_out="image_lev1.5.fits")
+```
+
 ## Example notebook
 
 **`notebook/image_plot_hdf.ipynb`** (image cube / HDF): recover, compress, consistency check, 12-panel image plot.
 
 **`notebook/spec_plot.ipynb`** (dynamic spectrum): load `demofile/20260513.fits`, plot Stokes I and V/I.
+
+**`notebook/refraction_correction.ipynb`** (refraction): fit, save, and apply refraction correction on a multi-frequency image FITS.
 
 Demo data: [`demofile/`](demofile/).
 
@@ -96,6 +110,8 @@ pip install -e ".[dev]"
 jupyter notebook notebook/image_plot_hdf.ipynb
 # or
 jupyter notebook notebook/spec_plot.ipynb
+# or
+jupyter notebook notebook/refraction_correction.ipynb
 ```
 
 ## Package layout
@@ -105,6 +121,7 @@ jupyter notebook notebook/spec_plot.ipynb
 | `lwasolarutl.file` | `compress_fits_to_h5`, `recover_fits_from_h5`, `check_h5_fits_consistency` |
 | `lwasolarutl.ndfits` | Read/write/wrap multi-dimensional solar FITS ([lwasolarproc](https://github.com/peijin94/lwasolarproc)) |
 | `lwasolarutl.spec` | `load_spectrum_fits`, `vi_ratio` for LWA dynamic-spectrum FITS |
+| `lwasolarutl.refraction_corr` | `refraction_fit_param`, `apply_refra_coeff`, `apply_refra_record` |
 | `lwasolarutl.plot_map` | `Sunmap` helper for heliocentric `imshow` / limb overlay |
 | `lwasolarutl.visualization` | `slow_pipeline_default_plot`, `plot_spec`, `make_allsky_image_plots` |
 
@@ -122,6 +139,7 @@ pytest tests/
 - `ndfits.py`: [lwasolarproc](https://github.com/peijin94/lwasolarproc/blob/main/lwasolarproc/ndfits.py)
 - 12-panel plot: [ovro-lwa-solar `visualization.py`](https://github.com/ovro-eovsa/ovro-lwa-solar/blob/b55f56d5f63f37e8168d374697af0ba3097b0dc6/ovrolwasolar/visualization.py)
 - Dynamic spectrum plot: [lwasolarview `plot_spec_fits.py`](https://github.com/peijin94/lwasolarview/blob/main/plot_spec_fits.py)
+- Refraction correction: [ovro-lwa-solar `refraction_correction.py`](https://github.com/ovro-eovsa/ovro-lwa-solar/blob/b55f56d5/ovrolwasolar/refraction_correction.py)
 
 ## License
 

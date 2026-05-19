@@ -8,6 +8,8 @@ def test_import():
     assert hasattr(lsu, "file")
     assert hasattr(lsu, "ndfits")
     assert hasattr(lsu, "spec")
+    assert hasattr(lsu, "refraction_corr")
+    assert callable(lsu.refraction_corr.refraction_fit_param)
     assert callable(lsu.spec.load_spectrum_fits)
     assert callable(lsu.visualization.plot_spec)
     assert not hasattr(lsu, "processing")
