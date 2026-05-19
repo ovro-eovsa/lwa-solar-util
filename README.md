@@ -60,9 +60,16 @@ fig, axes = lsu.visualization.slow_pipeline_default_plot(
     "image.fits",
     add_logo=False,
 )
+
+# 12-panel Stokes V (separate I and V FITS cubes)
+fig, axes = lsu.visualization.slow_pipeline_default_polarization_plot(
+    "image_I.fits",
+    "image_V.fits",
+    add_logo=False,
+)
 ```
 
-Requires a FITS file readable by `ndfits` (not raw `.hdf` — recover to FITS first if needed).
+Requires a FITS file readable by `ndfits` (not raw `.hdf` — recover to FITS first if needed). Image quicklooks follow [lwasolarproc `visualization.py`](https://github.com/peijin94/lwasolarproc/blob/main/lwasolarproc/visualization.py) (default `fov=14400` arcsec, `apply_fiducial_primary_beam=True` applies the sin-altitude beam correction).
 
 ### Dynamic spectrum FITS (Stokes I / V)
 
@@ -123,7 +130,7 @@ jupyter notebook notebook/refraction_correction.ipynb
 | `lwasolarutl.spec` | `load_spectrum_fits`, `vi_ratio` for LWA dynamic-spectrum FITS |
 | `lwasolarutl.refraction_corr` | `refraction_fit_param`, `apply_refra_coeff`, `apply_refra_record` |
 | `lwasolarutl.plot_map` | `Sunmap` helper for heliocentric `imshow` / limb overlay |
-| `lwasolarutl.visualization` | `slow_pipeline_default_plot`, `plot_spec`, `make_allsky_image_plots` |
+| `lwasolarutl.visualization` | `slow_pipeline_default_plot`, `slow_pipeline_default_polarization_plot`, `plot_spec`, `make_allsky_image_plots` |
 
 Top-level shortcuts: `lsu.compress_fits_to_h5`, `lsu.recover_fits_from_h5`, `lsu.check_h5_fits_consistency`.
 
@@ -137,7 +144,7 @@ pytest tests/
 
 - HDF5 compression/recovery: [ovro-lwa-solar `utils.py`](https://github.com/ovro-eovsa/ovro-lwa-solar/blob/main/ovrolwasolar/utils.py)
 - `ndfits.py`: [lwasolarproc](https://github.com/peijin94/lwasolarproc/blob/main/lwasolarproc/ndfits.py)
-- 12-panel plot: [ovro-lwa-solar `visualization.py`](https://github.com/ovro-eovsa/ovro-lwa-solar/blob/b55f56d5f63f37e8168d374697af0ba3097b0dc6/ovrolwasolar/visualization.py)
+- 12-panel / Stokes-V plots: [lwasolarproc `visualization.py`](https://github.com/peijin94/lwasolarproc/blob/main/lwasolarproc/visualization.py) (from ovro-lwa-solar b55f56d5)
 - Dynamic spectrum plot: [lwasolarview `plot_spec_fits.py`](https://github.com/peijin94/lwasolarview/blob/main/plot_spec_fits.py)
 - Refraction correction: [ovro-lwa-solar `refraction_correction.py`](https://github.com/ovro-eovsa/ovro-lwa-solar/blob/b55f56d5/ovrolwasolar/refraction_correction.py)
 
